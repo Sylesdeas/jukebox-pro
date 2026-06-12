@@ -1,10 +1,6 @@
 import express from "express";
 const app = express();
 import usersRouter from "./api/users.js";
-app.use("/users", usersRouter);
-export default app;
-
-app.use("/users", usersRouter);
 export default app;
 
 import morgan from "morgan";
@@ -16,6 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+app.use("/users", usersRouter);
 app.use("/tracks", tracksRouter);
 app.use("/playlists", playlistsRouter);
 

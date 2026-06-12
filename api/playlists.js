@@ -24,29 +24,30 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { name, description } = req.body;
+    const { name, description } = req.body ?? {};
 
     if (!name || !description) {
-      return res.status(400).send({ error: "Name and description required" });
+      return res.status(400).send("Name and description required.");
     }
 
     const playlist = await createPlaylist(name, description, req.user.id);
+
     res.status(201).send(playlist);
   } catch (err) {
     next(err);
   }
 });
 
-async function requirePlaylistOwnership(req, res, next) {
+async function requirePlaylistOwner(req, res, next) {
   try {
     const playlist = await getPlaylistById(req.params.id);
 
     if (!playlist) {
-      return res.status(404).send({ error: "Playlist not found" });
+      return res.status(404).send("Playlist not found.");
     }
 
     if (playlist.user_id !== req.user.id) {
-      return res.status(403).send({ error: "Forbidden" });
+      return res.status(403).send("Forbidden.");
     }
 
     req.playlist = playlist;
@@ -55,7 +56,7 @@ async function requirePlaylistOwnership(req, res, next) {
     next(err);
   }
 }
-router.get("/:id", requirePlaylistOwnership, async (req, res) => {
+router.get("/:id", requirePlaylistOwner, async (req, res) => {
   res.send(req.playlist);
 });
 
@@ -71,7 +72,7 @@ router.get("/:id", (req, res) => {
   res.send(req.playlist);
 });
 
-router.get("/:id/tracks", requirePlaylistOwnership, async (req, res, next) => {
+router.get("/:id/tracks", requirePlaylistOwner, async (req, res, next) => {
   try {
     const tracks = await getTracksByPlaylistId(req.params.id);
     res.send(tracks);
@@ -80,7 +81,7 @@ router.get("/:id/tracks", requirePlaylistOwnership, async (req, res, next) => {
   }
 });
 
-router.post("/:id/tracks", async (req, res) => {
+router.post("/:id/tracks", requirePlaylistOwner, async (req, res) => {
   if (!req.body) return res.status(400).send("Request body is required.");
 
   const { trackId } = req.body;

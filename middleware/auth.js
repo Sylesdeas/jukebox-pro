@@ -6,7 +6,7 @@ export async function requireUser(req, res, next) {
   const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
 
   if (!token) {
-    return res.status(401).send({ error: "Unauthorized" });
+    return res.status(401).send("Unauthorized.");
   }
 
   try {
@@ -14,12 +14,12 @@ export async function requireUser(req, res, next) {
     const user = await getUserById(payload.id);
 
     if (!user) {
-      return res.status(401).send({ error: "Unauthorized" });
+      return res.status(401).send("Unauthorized.");
     }
 
     req.user = user;
     next();
-  } catch {
-    res.status(401).send({ error: "Unauthorized" });
+  } catch (err) {
+    res.status(401).send("Unauthorized.");
   }
 }

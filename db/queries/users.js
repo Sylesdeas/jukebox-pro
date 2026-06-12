@@ -16,7 +16,7 @@ export async function createUser(username, hashedPassword) {
 
 export async function getUserByUsername(username) {
   const sql = `
-    SELECT id, username
+    SELECT *
     FROM users
     WHERE username = $1;
   `;
