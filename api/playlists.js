@@ -5,25 +5,58 @@ export default router;
 import {
   createPlaylist,
   getPlaylistById,
-  getPlaylists,
+  getPlaylistsByUserId,
 } from "#db/queries/playlists";
 import { createPlaylistTrack } from "#db/queries/playlists_tracks";
 import { getTracksByPlaylistId } from "#db/queries/tracks";
+import { requireUser } from "./middleware/auth.js";
 
-router.get("/", async (req, res) => {
-  const playlists = await getPlaylists();
-  res.send(playlists);
+router.use(requireUser);
+
+router.get("/", async (req, res, next) => {
+  try {
+    const playlists = await getPlaylistsByUserId(req.user.id);
+    res.send(playlists);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/", async (req, res) => {
-  if (!req.body) return res.status(400).send("Request body is required.");
+router.post("/", async (req, res, next) => {
+  try {
+    const { name, description } = req.body;
 
-  const { name, description } = req.body;
-  if (!name || !description)
-    return res.status(400).send("Request body requires: name, description");
+    if (!name || !description) {
+      return res.status(400).send({ error: "Name and description required" });
+    }
 
-  const playlist = await createPlaylist(name, description);
-  res.status(201).send(playlist);
+    const playlist = await createPlaylist(name, description, req.user.id);
+    res.status(201).send(playlist);
+  } catch (err) {
+    next(err);
+  }
+});
+
+async function requirePlaylistOwnership(req, res, next) {
+  try {
+    const playlist = await getPlaylistById(req.params.id);
+
+    if (!playlist) {
+      return res.status(404).send({ error: "Playlist not found" });
+    }
+
+    if (playlist.user_id !== req.user.id) {
+      return res.status(403).send({ error: "Forbidden" });
+    }
+
+    req.playlist = playlist;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+router.get("/:id", requirePlaylistOwnership, async (req, res) => {
+  res.send(req.playlist);
 });
 
 router.param("id", async (req, res, next, id) => {
@@ -38,9 +71,13 @@ router.get("/:id", (req, res) => {
   res.send(req.playlist);
 });
 
-router.get("/:id/tracks", async (req, res) => {
-  const tracks = await getTracksByPlaylistId(req.playlist.id);
-  res.send(tracks);
+router.get("/:id/tracks", requirePlaylistOwnership, async (req, res, next) => {
+  try {
+    const tracks = await getTracksByPlaylistId(req.params.id);
+    res.send(tracks);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/:id/tracks", async (req, res) => {
